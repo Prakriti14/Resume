@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 
 type ResumeData = {
@@ -20,7 +21,12 @@ export default function ResumeForm({ onUpdate }: Props) {
   const onSubmit = (data: ResumeData) => onUpdate(data);
 
   return (
-    <form onChange={handleSubmit(onSubmit)} className="card">
+    <form
+      onChange={(event) => {
+        void handleSubmit(onSubmit)(event);
+      }}
+      className="card"
+    >
       <input {...register("fullName")} placeholder="Full Name" />
       <input {...register("email")} placeholder="Email" />
       <input {...register("phone")} placeholder="Phone" />

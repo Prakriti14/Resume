@@ -28,14 +28,14 @@ export function Chips({
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
       {list.map((s, i) => (
-        <span
-          key={i}
-          className="rv-chip"
-          style={{ ...style, animationDelay: `${i * 40}ms` }}
-        >
-          {s}
-        </span>
-      ))}
+  <span
+    key={s}
+    className="rv-chip"
+    style={{ ...style, animationDelay: `${i * 40}ms` }}
+  >
+    {s}
+  </span>
+))}
     </div>
   );
 }
