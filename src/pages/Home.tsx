@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import type { CSSProperties } from "react";
 import { RiAddLine, RiDeleteBin6Line } from "react-icons/ri";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import TemplatePicker from "../components/TemplatePicker";
 import { templates } from "../components/templates";
 import type { ExperienceItem, ResumeData } from "../components/types";
@@ -185,10 +187,62 @@ function ResumeForm({ onUpdate }: { onUpdate: (data: ResumeData) => void }) {
 
 export default function Home() {
   const [resumeData, setResumeData] = useState<ResumeData>(makeInitialData);
+  const [downloading, setDownloading] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const active = templates.find((t) => t.value === resumeData.template) ?? templates[0];
   const Template = active.Component;
+
+ const handleDownload = async () => {
+  const el = previewRef.current;
+  if (!el || downloading) return;
+  setDownloading(true);
+
+  try {
+    await document.fonts.ready;
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      scrollX: 0,
+      scrollY: 0,
+      onclone: (doc: Document) => {
+        const style = doc.createElement("style");
+        style.textContent = `
+          *, *::before, *::after {
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            animation-fill-mode: forwards !important;
+            transition: none !important;
+          }
+          #resume-print { transform: none !important; }
+        `;
+        doc.head.appendChild(style);
+      },
+    });
+
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgH = (canvas.height * pageW) / canvas.width;
+    const img = canvas.toDataURL("image/png");
+
+    let offset = 0;
+    pdf.addImage(img, "PNG", 0, offset, pageW, imgH);
+    while (imgH + offset > pageH + 1) {
+      offset -= pageH;
+      pdf.addPage();
+      pdf.addImage(img, "PNG", 0, offset, pageW, imgH);
+    }
+
+    const name = resumeData.fullName.trim().replace(/\s+/g, "-") || "resume";
+    pdf.save(`${name}-${active.value}.pdf`);
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+  } finally {
+    setDownloading(false);
+  }
+};
 
   const checks = [
     resumeData.fullName,
@@ -222,8 +276,8 @@ export default function Home() {
                 <i style={{ width: `${percent}%` }} />
               </div>
             </div>
-            <button className="rv-btn" onClick={() => window.print()}>
-              ⬇ Download PDF
+            <button className="rv-btn" onClick={() => { void handleDownload(); }} disabled={downloading}>
+              {downloading ? "Generating…" : "⬇ Download PDF"}
             </button>
           </div>
         </div>
@@ -256,7 +310,7 @@ export default function Home() {
           </div>
 
           <p className="rv-tip">
-            Tip: in the print dialog choose “Save as PDF” and enable background graphics.
+            Downloads as a PDF using the selected template.
           </p>
         </div>
       </main>
